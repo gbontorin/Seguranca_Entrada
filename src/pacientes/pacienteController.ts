@@ -10,13 +10,35 @@ import { AppError, Status } from '../error/ErrorHandler.js'
 import { encryptPassword } from '../utils/senhaUtils.js'
 import { pacienteSchema } from './pacienteYupSchema.js';
 import { sanitizacaoPaciente } from './pacienteSanitizations.js'
+
+//import express
 import { query, validationResult } from 'express-validator'
 
+// User input: deve ser
+// a. Ser uma string
+// b. Ter no mínimo 2 e no máximo 80 caracteres
+// c. Ser sanitizado (remover espaços extras, 
 
-export const consultaPorPaciente = async (
+// Proteja contra SQL Injection: valide e filtre o input para garantir que ele não contenha padrões suspeitos como ==, <script> etc.  cont.c.) caracteres perigosos)
+
+
+export const consultaPorPaciente = [
+  query('userInput')
+  .trim().escape()  
+  .isString().withMessage('O nome precisa ser um texto.')
+  .isLength({ min: 2, max: 80 }).withMessage('Nome deve ter entre 2 e 80 caracteres.'),
+   
+
+async (
   req: Request,
   res: Response
 ): Promise<void> => {
+    const erros = validationResult(req);
+    if (!erros.isEmpty()) {
+      res.status(400).json({ erros: erros.array() });
+      return;
+    }
+
   const { userInput } = req.query;
   const query = `SELECT * FROM paciente WHERE nome = ?`;
   try {
@@ -32,6 +54,8 @@ export const consultaPorPaciente = async (
   }
 }
 
+]
+// fim da consulta
 
 export const criarPaciente = async (
   req: Request,
