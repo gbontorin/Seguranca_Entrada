@@ -59,7 +59,7 @@ async (
         /&lt;/gi, /&gt;/gi      // &lt; para <, &gt; para >
       ];
 
-      // Iterar com a lista anterior
+      // Iterar com a lista HTML
       let pattern 
       for (pattern of dangerousHtmlPatterns) {
         if (pattern.test(userInput)) {
@@ -76,6 +76,7 @@ async (
         /--/g, /\/\*/g, /\*\//g // Comentários SQL
       ];
       
+      // Iterar com a lista SQL
       for (pattern of sqlKeywords) {
         if (pattern.test(userInput)) {
           res.status(400).json({message: `Sua entrada contém um chave SQL: ${pattern.source}. Por favor, remova-o.`,});
