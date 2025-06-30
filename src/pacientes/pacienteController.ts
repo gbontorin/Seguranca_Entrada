@@ -67,6 +67,22 @@ async (
           return;
         }
       }
+
+      const sqlKeywords = [
+        /SELECT\s/gi, /UNION\s/gi, /INSERT\s/gi, /DELETE\s/gi, /UPDATE\s/gi, /DROP\s/gi,
+        /ALTER\s/gi, /TRUNCATE\s/gi, /EXEC\s/gi, /EXECUTE\s/gi, /xp_cmdshell/gi,
+        /OR\s+\d+=\d+/gi, /AND\s+\d+=\d+/gi,
+        /'\s*OR\s*'\d+='|\"\s*OR\s*\"\d+=\"/gi, // ' OR '1'='1' ou " OR "1"="1"
+        /--/g, /\/\*/g, /\*\//g // Comentários SQL
+      ];
+      
+      for (pattern of sqlKeywords) {
+        if (pattern.test(userInput)) {
+          res.status(400).json({message: `Sua entrada contém um chave SQL: ${pattern.source}. Por favor, remova-o.`,});
+          return;
+        }
+      }
+
     }
 
   const query = `SELECT * FROM paciente WHERE nome = ?`;
