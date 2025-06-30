@@ -19,7 +19,6 @@ import { query, validationResult } from 'express-validator'
 // b. Ter no mínimo 2 e no máximo 80 caracteres
 // c. Ser sanitizado (remover espaços extras, 
 
-// Proteja contra SQL Injection: valide e filtre o input para garantir que ele não contenha padrões suspeitos como ==, <script> etc.  cont.c.) caracteres perigosos)
 
 export const consultaPorPaciente = [
   query('userInput')
@@ -33,19 +32,52 @@ async (
   res: Response
 ): Promise<void> => {
     const erros = validationResult(req);
+    const userInput: string = req.query.userInput as string;
     if (!erros.isEmpty()) {
       res.status(400).json({ erros: erros.array() });
       return;
     }
+    else
+    {
+      // Proteja contra SQL Injection: valide e filtre o input para garantir que ele não contenha padrões suspeitos como ==, <script> etc.  cont.c.) caracteres perigosos)
+      
+      const dangerousHtmlPatterns = [
+        /<script\b[^>]*>[\s\S]*?<\/script>/gi, // Remove <script> tags e seu conteúdo
+        /<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, // Remove <iframe> tags e seu conteúdo
+        /<embed\b[^>]*>[\s\S]*?<\/embed>/gi,   // Remove <embed> tags e seu conteúdo
+        /<object\b[^>]*>[\s\S]*?<\/object>/gi, // Remove <object> tags e seu conteúdo
+        /<link\s+rel=["']import["'][^>]*>/gi,  // Remove <link rel="import">
+        /<meta\s+http-equiv=["']refresh["'][^>]*>/gi, // Remove <meta http-equiv="refresh">
+        // Atributos de evento e javascript: URIs (com espaços e escapes para ofuscação)
+        /\s(?:on[a-z]+|href|src|style)\s*=\s*(['"]?)\s*(?:javascript:|data:text\/html;base64,)[^>]*?\1/gi,
+        // Ex: <img src="javascript:alert(1)">, <a href="javascript:void(0)">
+        // Uma regex mais genérica para atributos 'on*' e URIs perigosas pode ser:
+        /\s(on[a-z]+)\s*=\s*(['"]?)[^>]*?\1/gi, // Remove on* atributos como onclick="...", onerror="..."
+        /\s(href|src|data)\s*=\s*(['"]?)(?:javascript:|data:text\/html;base64,)[^>]*?\2/gi, // Remove javascript: e data: URIs
+        // Entidades HTML ofuscadas para < e >
+        /&#x3C;/gi, /&#x3E;/gi, // &#x3C; para <, &#x3E; para >
+        /&lt;/gi, /&gt;/gi      // &lt; para <, &gt; para >
+      ];
 
-  const { userInput } = req.query;
+      // Iterar com a lista anterior
+      let pattern 
+      for (pattern of dangerousHtmlPatterns) {
+        if (pattern.test(userInput)) {
+          res.status(400).json({message: `Sua entrada contém um padrão HTML suspeito: ${pattern.source}. Por favor, remova-o.`,});
+          return;
+        }
+      }
+    }
+
   const query = `SELECT * FROM paciente WHERE nome = ?`;
   try {
     const listaPacientes = await AppDataSource.manager.query(query, [userInput]);
     if (listaPacientes.length === 0) {
       res.status(404).json('Paciente não encontrado!');
     } else {
-      res.status(200).json(listaPacientes);
+    // parte da Sanitização
+      const pacientesSanitizados = listaPacientes.map(({ senha, cpf, ...safe }) => safe);
+      res.status(200).json(pacientesSanitizados);
     }
   } catch (error) {
     console.log(error)
@@ -54,7 +86,7 @@ async (
 }
 
 ]
-// fim da consulta
+// fim da consultaPorPaciente
 
 export const criarPaciente = async (
   req: Request,
