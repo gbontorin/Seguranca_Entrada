@@ -21,13 +21,12 @@ import { query, validationResult } from 'express-validator'
 
 // Proteja contra SQL Injection: valide e filtre o input para garantir que ele não contenha padrões suspeitos como ==, <script> etc.  cont.c.) caracteres perigosos)
 
-
 export const consultaPorPaciente = [
   query('userInput')
   .trim().escape()  
   .isString().withMessage('O nome precisa ser um texto.')
   .isLength({ min: 2, max: 80 }).withMessage('Nome deve ter entre 2 e 80 caracteres.'),
-   
+
 
 async (
   req: Request,
